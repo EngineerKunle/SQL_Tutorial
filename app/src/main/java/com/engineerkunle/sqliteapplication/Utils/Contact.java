@@ -21,6 +21,10 @@ public class Contact {
         this._phone_number = _phone_number;
     }
 
+    public Contact() {
+
+    }
+
     public int get_id() {
         return _id;
     }
