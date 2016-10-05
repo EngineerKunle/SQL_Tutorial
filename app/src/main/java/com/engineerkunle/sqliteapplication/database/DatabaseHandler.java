@@ -18,7 +18,7 @@ import java.util.List;
 public class DatabaseHandler extends SQLiteOpenHelper{
 
     // when changing Schema database version needs to be incremented
-    private static final int DATABASE_VERSION = 0;
+    private static final int DATABASE_VERSION = 1;
 
     // Database Name
     private static final String DATABASE_NAME = "contactsManager";
@@ -38,8 +38,9 @@ public class DatabaseHandler extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String CREATE_CONTACTS_TABLE = "CREATE TABLE " + TABLE_CONTACTS + " (" + KEY_ID +
-                " INTERGER PRIMARY KEY," + KEY_NAME + " TEXT," + KEY_PH_NO + " TEXT" + " )";
+        String CREATE_CONTACTS_TABLE = "CREATE TABLE " + TABLE_CONTACTS + "("
+                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_NAME + " TEXT,"
+                + KEY_PH_NO + " TEXT" + ")";
 
         db.execSQL(CREATE_CONTACTS_TABLE);
     }
@@ -59,8 +60,8 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(KEY_NAME, contact.get_name());
-        values.put(KEY_PH_NO, contact.get_phone_number());
+        values.put(KEY_NAME, contact.getName());
+        values.put(KEY_PH_NO, contact.getPhoneNumber());
 
         //Insert rows
         db.insert(TABLE_CONTACTS, null, values);
@@ -95,31 +96,60 @@ public class DatabaseHandler extends SQLiteOpenHelper{
 
         List<Contact> contactList = new ArrayList<Contact>();
         //Select Query
-        String query = "SELECT * FROM WHERE " + TABLE_CONTACTS;
-        SQLiteDatabase db = this.getWritableDatabase();
+        //String query = "SELECT * FROM " + TABLE_CONTACTS;
+        String[] allColumns = new String[] { KEY_ID,
+                KEY_NAME, KEY_PH_NO };
+        SQLiteDatabase db = this.getReadableDatabase();
 
-        Cursor cursor = db.rawQuery(query, null);
+        Cursor cursor = db.query(TABLE_CONTACTS,
+                allColumns, null, null, null, null, null);
 
-        if(cursor.moveToFirst()){
-            do {
-                Contact contact = new Contact();
-                contact.set_id(Integer.parseInt(cursor.getString(0)));
-                contact.set_name(cursor.getString(1));
-                contact.set_phone_number(cursor.getString(2));
-                // Adding contact to list
-                contactList.add(contact);
-            } while (cursor.moveToNext());
+        cursor.moveToFirst();
+        while (!cursor.isAfterLast()) {
+            Contact contact = contactToSave(cursor);
+            contactList.add(contact);
+            cursor.moveToNext();
         }
-
+        // make sure to close the cursor
+        cursor.close();
         return contactList;
     }
 
-    // Getting Contact counts
-    public int getContactsCount(){return 0;}
+    private Contact contactToSave(Cursor cursor){
+        Contact contact = new Contact();
+        contact.setId(cursor.getLong(0));
+        contact.setName(cursor.getString(1));
+        contact.setPhoneNumber(cursor.getString(2));
+
+        return contact;
+    }
 
     // Updating single contact
-    public int updateContact(Contact contact){return  0;}
+    public int updateContact(Contact contact){
+        SQLiteDatabase db = this.getWritableDatabase();
 
-    public void deleteContact(Contact contact){}
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KEY_NAME, contact.getName());
+        contentValues.put(KEY_PH_NO, contact.getPhoneNumber());
 
+        return  db.update(TABLE_CONTACTS, contentValues, KEY_ID + " =?"
+                , new String[]{String.valueOf(contact.getId())});
+    }
+
+    //delete contact
+    public void deleteContact(Contact contact){
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_CONTACTS, KEY_ID + " =?",
+                new String[]{String.valueOf(contact.getId())});
+        db.close();
+    }
+
+    // Getting Contact counts
+    public int getContactsCount(){
+        String query = "SELECT  * FROM " + TABLE_CONTACTS;
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(query, null);
+        cursor.close();
+        return cursor.getCount();
+    }
 }
